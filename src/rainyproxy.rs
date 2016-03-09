@@ -1,9 +1,8 @@
-use std::net::{SocketAddr, ToSocketAddrs, lookup_host};
-use std::str::FromStr;
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::iter::Iterator;
 use std::io::Result as IoResult;
 use mioco;
-use mioco::tcp::{TcpListener, TcpStream};
+use mioco::tcp::TcpListener;
 use request::Request;
 use response::Response;
 use connection::{Connection, ConnResult};
@@ -44,27 +43,17 @@ impl RainyProxy {
                         mioco::spawn(move || -> IoResult<()> {
                             loop {
                                 // recieve source request
-                                let mut request: Request = try_com!(src_conn.recieve(), err=>break);
+                                let request: Request = try_com!(src_conn.recieve(), err=>break);
+                                debug!("receive from client.");
 
-                                // lookup and connect to destination host
-                                let addr = match lookup_dest(&mut request) {
-                                    Some(sock) => sock,
-                                    None => {
-                                        debug!("cannot lookup host {:?}", request.path);
-                                        break;
-                                    }
+                                // connect to the server
+                                let mut dest_conn = match Connection::from(&request.host()
+                                                                                   .as_str(),
+                                                                           &request.port()) {
+                                    Some(conn) => conn,
+                                    None => break,
                                 };
-                                request.path = Some(request.path
-                                                           .as_ref()
-                                                           .unwrap()
-                                                           .split("/")
-                                                           .skip(3)
-                                                           .fold(String::from(""),
-                                                                 |acc, s| acc + "/" + s));
-
-                                let mut dest_conn = Connection::new(TcpStream::connect(&addr)
-                                                                        .unwrap());
-                                debug!("connecting to server {}", addr);
+                                debug!("connect to server.");
 
                                 // send request to destination host
                                 try_com!(dest_conn.send(&request), err=>break);
@@ -92,46 +81,4 @@ impl RainyProxy {
         });
         Ok(())
     }
-}
-
-
-fn lookup_dest(req: &mut Request) -> Option<SocketAddr> {
-    if req.path.is_none() {
-        return None;
-    }
-
-    let path = req.path.as_ref().unwrap();
-    let host = extract_host(&path);
-    let mut lookuped: SocketAddr = match lookup_host(&host) {
-        Ok(mut lkup_host) => lkup_host.nth(0).unwrap().unwrap(),
-        Err(e) => return None,
-    };
-
-    let to_port = extract_port(path).unwrap_or(80);
-    lookuped.set_port(to_port);
-    debug!("forword host: {}", &lookuped);
-
-    return Some(lookuped);
-}
-
-fn extract_host(path: &str) -> String {
-    path.trim_left_matches("http://")
-        .split("/")
-        .nth(0)
-        .unwrap()
-        .split(":")
-        .nth(0)
-        .unwrap()
-        .to_string()
-}
-
-fn extract_port(path: &str) -> Option<u16> {
-    let port_str = match path.split(":").nth(2) {
-                       Some(s) => s,
-                       None => return None,
-                   }
-                   .split("/")
-                   .nth(0)
-                   .unwrap();
-    FromStr::from_str(port_str).ok()
 }

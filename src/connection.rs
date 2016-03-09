@@ -1,5 +1,5 @@
-use std::io::Result as IoResult;
 use std::io;
+use std::net::lookup_host;
 use mioco;
 use httparse_orig;
 use parsable::{Parsable, Sendable};
@@ -17,6 +17,27 @@ pub struct Connection {
 impl Connection {
     pub fn new(stream: mioco::tcp::TcpStream) -> Connection {
         Connection { stream: stream }
+    }
+
+    pub fn from(host: &str, port: &u16) -> Option<Connection> {
+        let lookupd = match lookup_host(host) {
+            Ok(l) => l,
+            Err(_) => return None,
+        };
+
+        for result in lookupd {
+            let mut addr = match result {
+                Ok(a) => a,
+                Err(e) => return None,
+            };
+
+            addr.set_port(*port);
+            match mioco::tcp::TcpStream::connect(&addr) {
+                Ok(c) => return Some(Connection::new(c)),
+                Err(e) => continue,
+            };
+        }
+        None
     }
 
     pub fn recieve<P: Parsable>(&mut self) -> ConnResult<P> {

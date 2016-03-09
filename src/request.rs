@@ -11,6 +11,32 @@ pub struct Request {
     pub body: Option<Vec<u8>>,
 }
 
+impl Request {
+    pub fn host(&self) -> String {
+        self.path
+            .as_ref()
+            .unwrap()
+            .trim_left_matches("http://")
+            .split("/")
+            .nth(0)
+            .unwrap()
+            .split(":")
+            .nth(0)
+            .unwrap()
+            .to_string()
+    }
+    pub fn port(&self) -> u16 {
+        let port_str = match self.path.as_ref().unwrap().split(":").nth(2) {
+                           Some(s) => s,
+                           None => return 80,
+                       }
+                       .split("/")
+                       .nth(0)
+                       .unwrap();
+        str::FromStr::from_str(port_str).ok().unwrap_or(80)
+    }
+}
+
 impl Parsable for Request {
     fn new() -> Request {
         Request {
@@ -69,6 +95,13 @@ impl Sendable for Request {
         assert!(self.path.is_some());
         assert!(self.version.is_some());
 
+        let path = self.path
+                       .as_ref()
+                       .unwrap()
+                       .split("/")
+                       .skip(3)
+                       .fold(String::from(""), |acc, s| acc + "/" + s);
+
         let headers = self.headers
                           .iter()
                           .fold(String::new(), |acc, (k, v)| {
@@ -79,7 +112,7 @@ impl Sendable for Request {
 
         let s = format!("{} {} HTTP/1.{}\r\n{}\r\n",
                         self.method.as_ref().unwrap().as_str(),
-                        self.path.as_ref().unwrap().as_str(),
+                        path.as_str(),
                         self.version.as_ref().unwrap(),
                         headers);
 
