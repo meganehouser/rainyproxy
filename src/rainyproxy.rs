@@ -8,6 +8,16 @@ use request::Request;
 use response::Response;
 use connection::{Connection, ConnResult};
 
+macro_rules! try_com {
+    ($com: expr, err => $errexpr: expr) => {
+        match $com {
+            ConnResult::Ok(x) => x,
+            ConnResult::ParseErr(_) => $errexpr,
+            ConnResult::IoError(_) => $errexpr,
+        }
+    }
+}
+
 ///
 /// HTTP Proxy Server implemenation
 ///
@@ -34,11 +44,7 @@ impl RainyProxy {
                         mioco::spawn(move || -> IoResult<()> {
                             loop {
                                 // recieve source request
-                                let mut request: Request = match src_conn.recieve() {
-                                    ConnResult::Ok(req) => req,
-                                    ConnResult::ParseErr(p_err) => break,
-                                    ConnResult::IoError(io_err) => break,
-                                };
+                                let mut request: Request = try_com!(src_conn.recieve(), err=>break);
 
                                 // lookup and connect to destination host
                                 let addr = match lookup_dest(&mut request) {
@@ -61,29 +67,17 @@ impl RainyProxy {
                                 debug!("connecting to server {}", addr);
 
                                 // send request to destination host
-                                match dest_conn.send(&request) {
-                                    ConnResult::Ok(()) => {}
-                                    ConnResult::ParseErr(p_err) => break,
-                                    ConnResult::IoError(io_err) => break,
-                                }
+                                try_com!(dest_conn.send(&request), err=>break);
 
                                 debug!("send to server.");
 
                                 // recieve destination response
-                                let response: Response = match dest_conn.recieve() {
-                                    ConnResult::Ok(req) => req,
-                                    ConnResult::ParseErr(p_err) => break,
-                                    ConnResult::IoError(io_err) => break,
-                                };
+                                let response: Response = try_com!(dest_conn.recieve(), err=>break);
 
                                 debug!("recieved from server.");
 
                                 // send response to source host
-                                match src_conn.send(&response) {
-                                    ConnResult::Ok(()) => {}
-                                    ConnResult::ParseErr(p_err) => break,
-                                    ConnResult::IoError(io_err) => break,
-                                };
+                                try_com!(src_conn.send(&response), err=>break);
 
                                 debug!("send to client");
                             }
