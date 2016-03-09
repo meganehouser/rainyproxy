@@ -9,7 +9,7 @@ pub enum ParseStatus<T> {
 impl<T> ParseStatus<T> {
     pub fn is_complete(&self) -> bool {
         match *self {
-            ParseStatus::Complete => true,
+            ParseStatus::Complete(_) => true,
             _ => false,
         }
     }

@@ -30,10 +30,10 @@ impl RainyProxy {
         mioco::start(move || {
             for _ in 0..mioco::thread_num() {
                 let listener: TcpListener = try!(listener.try_clone());
-                mioco::spawn(move || {
+                mioco::spawn(move || -> IoResult<()> {
                     loop {
                         let mut src_conn = Connection::new(try!(listener.accept()));
-                        mioco::spawn(move || {
+                        mioco::spawn(move || -> IoResult<()> {
                             loop {
                                 // recieve source request
                                 let mut request: Request = match src_conn.recieve() {
