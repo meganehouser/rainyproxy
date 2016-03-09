@@ -11,30 +11,24 @@ fn main() {
     let matches = App::new("rainy")
                       .version("0.0.1")
                       .author("meganehouser")
-                      .arg(Arg::with_name("port")
-                               .short("p")
-                               .long("port")
-                               .value_name("PORT")
-                               .required(false))
-                      .arg(Arg::with_name("host")
-                               .short("h")
-                               .long("host")
-                               .value_name("HOST")
+                      .arg(Arg::with_name("addr")
+                               .short("a")
+                               .long("address")
+                               .value_name("ADDRESS")
+                               .help("listen address (ip address : port no)")
                                .required(false))
                       .arg(Arg::with_name("loglevel")
+                               .short("l")
                                .long("loglevel")
                                .value_name("LOG_LEVEL")
                                .required(false))
                       .get_matches();
 
-    let port = matches.value_of("port").unwrap_or("8888");
-    let host = matches.value_of("host").unwrap_or("127.0.0.1");
-    let addr = [host, ":", port].concat();
-
+    let addr = matches.value_of("address").unwrap_or("127.0.0.1:8800");
     set_log_level(matches.value_of("loglevel").unwrap_or("info"));
     env_logger::init().unwrap();
 
-    let proxy = RainyProxy::new(&addr.as_str());
+    let proxy = RainyProxy::new(&addr);
     proxy.serve();
 }
 
