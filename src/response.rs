@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str;
 use httparse_orig;
-use parsable::{Parsable, Sendable, ParseStatus};
+use parsable::{Parsable, Sendable, ParseStatus, parse_body};
 
 pub struct Response {
     pub version: Option<u8>,
@@ -36,8 +36,7 @@ impl Parsable for Response {
             false => return ParseStatus::InProgress,
         };
 
-
-        let body = match parse_body(&res, &buf[res_len..]) {
+        let body = match parse_body(&res.headers, &buf[res_len..]) {
             ParseStatus::Complete(bdy) => bdy,
             ParseStatus::InProgress => return ParseStatus::InProgress,
             ParseStatus::Err(err) => return ParseStatus::Err(err),
@@ -53,27 +52,17 @@ impl Parsable for Response {
         self.reason = Some(String::from(res.reason.unwrap()));
         self.headers = headers_hm;
         self.body = body;
-        return ParseStatus::Complete(0);
-    }
-}
+        let length = (match self.body.as_ref() {
+            Some(ref b) => b.len(),
+            None => 0,
+        }) + res_len;
 
-fn parse_body(req: &httparse_orig::Response, buf: &[u8]) -> ParseStatus<Option<Vec<u8>>> {
-    match req.headers.iter().find(|&&h| h.name == "Content-Length") {
-        Some(h) => {
-            let len: usize = str::FromStr::from_str(str::from_utf8(h.value).unwrap()).unwrap();
-            if len <= buf.len() {
-                return ParseStatus::Complete(Some(Vec::from(buf)));
-            } else {
-                return ParseStatus::InProgress;
-            }
-        }
-        None => return ParseStatus::Complete(None),
+        ParseStatus::Complete(length)
     }
 }
 
 impl Sendable for Response {
     fn to_bytes(&self) -> Vec<u8> {
-        let mut payload: Vec<u8> = Vec::new();
         let headers = self.headers
                           .iter()
                           .fold(String::new(), |acc, (k, v)| {
@@ -82,18 +71,17 @@ impl Sendable for Response {
                                          .as_str();
                           });
 
-        let mut s = format!("HTTP/1.{} {} {}\r\n{}\r\n",
-                            self.version.as_ref().unwrap(),
-                            self.status_code.as_ref().unwrap(),
-                            self.reason.as_ref().unwrap().as_str(),
-                            headers);
+        let s = format!("HTTP/1.{} {} {}\r\n{}\r\n",
+                        self.version.as_ref().unwrap(),
+                        self.status_code.as_ref().unwrap(),
+                        self.reason.as_ref().unwrap().as_str(),
+                        headers);
 
         let mut payload: Vec<u8> = Vec::from(s.as_bytes());
         if self.body.is_some() {
             payload.extend_from_slice(self.body.as_ref().unwrap());
         }
 
-        debug!("response: {}", String::from_utf8_lossy(&payload));
         payload
     }
 }

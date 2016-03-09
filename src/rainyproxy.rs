@@ -1,11 +1,9 @@
 use std::net::{SocketAddr, ToSocketAddrs, lookup_host};
 use std::str::FromStr;
 use std::iter::Iterator;
-use std::io;
 use std::io::Result as IoResult;
 use mioco;
 use mioco::tcp::{TcpListener, TcpStream};
-use httparse_orig;
 use request::Request;
 use response::Response;
 use connection::{Connection, ConnResult};
