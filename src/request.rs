@@ -35,6 +35,22 @@ impl Request {
                        .unwrap();
         str::FromStr::from_str(port_str).ok().unwrap_or(80)
     }
+
+    pub fn must_close(&self) -> bool {
+        let conn = self.headers.get("Connection");
+
+        match self.version {
+            Some(v) => {
+                if v == 0 && conn.is_some() && conn.unwrap().as_slice() != b"Keep-Alive" {
+                    return true;
+                } else if v == 1 && conn.is_some() && conn.unwrap().as_slice() != b"Close" {
+                    return false;
+                }
+            }
+            None => {}
+        };
+        return true;
+    }
 }
 
 impl Parsable for Request {
@@ -95,6 +111,7 @@ impl Sendable for Request {
         assert!(self.path.is_some());
         assert!(self.version.is_some());
 
+
         let path = self.path
                        .as_ref()
                        .unwrap()
@@ -102,19 +119,21 @@ impl Sendable for Request {
                        .skip(3)
                        .fold(String::from(""), |acc, s| acc + "/" + s);
 
-        let headers = self.headers
-                          .iter()
-                          .fold(String::new(), |acc, (k, v)| {
-                              return acc +
-                                     format!("{}: {}\r\n", &k, str::from_utf8(&v).unwrap())
-                                         .as_str();
-                          });
+        let mut headers = self.headers.clone();
+        headers.insert(String::from("Connection"), Vec::from("Close"));
+
+        let hs = headers.iter()
+                        .filter(|h| h.0.as_str() != "Keep-Alive")
+                        .fold(String::new(), |acc, (k, v)| {
+                            return acc +
+                                   format!("{}: {}\r\n", &k, str::from_utf8(&v).unwrap()).as_str();
+                        });
 
         let s = format!("{} {} HTTP/1.{}\r\n{}\r\n",
                         self.method.as_ref().unwrap().as_str(),
                         path.as_str(),
                         self.version.as_ref().unwrap(),
-                        headers);
+                        hs);
 
         let mut payload: Vec<u8> = Vec::from(s.as_bytes());
         if self.body.is_some() {

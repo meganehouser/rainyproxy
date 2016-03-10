@@ -34,7 +34,7 @@ impl RainyProxy {
         let listener = try!(TcpListener::bind(&self.addr));
         debug!("Proxy server listen at {}", &self.addr);
 
-        mioco::start(move || {
+        mioco::start(move || -> IoResult<()> {
             for _ in 0..mioco::thread_num() {
                 let listener: TcpListener = try!(listener.try_clone());
                 mioco::spawn(move || -> IoResult<()> {
@@ -69,6 +69,10 @@ impl RainyProxy {
                                 try_com!(src_conn.send(&response), err=>break);
 
                                 debug!("send to client");
+
+                                if request.must_close() {
+                                    break;
+                                }
                             }
 
                             Ok(())
