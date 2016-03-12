@@ -4,9 +4,9 @@ use httparse_orig;
 use parsable::{Parsable, Sendable, ParseStatus, parse_body};
 
 pub struct Request {
-    pub method: Option<String>,
-    pub path: Option<String>,
-    pub version: Option<u8>,
+    pub method: String,
+    pub path: String,
+    pub version: u8,
     pub headers: HashMap<String, Vec<u8>>,
     pub body: Option<Vec<u8>>,
 }
@@ -14,8 +14,6 @@ pub struct Request {
 impl Request {
     pub fn host(&self) -> String {
         self.path
-            .as_ref()
-            .unwrap()
             .trim_left_matches("http://")
             .split("/")
             .nth(0)
@@ -26,7 +24,7 @@ impl Request {
             .to_string()
     }
     pub fn port(&self) -> u16 {
-        let port_str = match self.path.as_ref().unwrap().split(":").nth(2) {
+        let port_str = match self.path.split(":").nth(2) {
                            Some(s) => s,
                            None => return 80,
                        }
@@ -39,16 +37,11 @@ impl Request {
     pub fn must_close(&self) -> bool {
         let conn = self.headers.get("Connection");
 
-        match self.version {
-            Some(v) => {
-                if v == 0 && conn.is_some() && conn.unwrap().as_slice() != b"Keep-Alive" {
-                    return true;
-                } else if v == 1 && conn.is_some() && conn.unwrap().as_slice() != b"Close" {
-                    return false;
-                }
-            }
-            None => {}
-        };
+        if self.version == 0 && conn.is_some() && conn.unwrap().as_slice() != b"Keep-Alive" {
+            return true;
+        } else if self.version == 1 && conn.is_some() && conn.unwrap().as_slice() != b"Close" {
+            return false;
+        }
         return true;
     }
 }
@@ -56,9 +49,9 @@ impl Request {
 impl Parsable for Request {
     fn new() -> Request {
         Request {
-            method: None,
-            path: None,
-            version: None,
+            method: String::from("GET"),
+            path: String::from("/"),
+            version: 1,
             headers: HashMap::new(),
             body: None,
         }
@@ -89,9 +82,9 @@ impl Parsable for Request {
             headers_hm.insert(String::from(h.name), Vec::from(h.value));
         }
 
-        self.method = Some(String::from(req.method.unwrap()));
-        self.path = Some(String::from(req.path.unwrap()));
-        self.version = Some(req.version.unwrap());
+        self.method = String::from(req.method.unwrap());
+        self.path = String::from(req.path.unwrap());
+        self.version = req.version.unwrap();
         self.headers = headers_hm;
         self.body = body;
 
@@ -107,14 +100,7 @@ impl Parsable for Request {
 
 impl Sendable for Request {
     fn to_bytes(&self) -> Vec<u8> {
-        assert!(self.method.is_some());
-        assert!(self.path.is_some());
-        assert!(self.version.is_some());
-
-
         let path = self.path
-                       .as_ref()
-                       .unwrap()
                        .split("/")
                        .skip(3)
                        .fold(String::from(""), |acc, s| acc + "/" + s);
@@ -130,9 +116,9 @@ impl Sendable for Request {
                         });
 
         let s = format!("{} {} HTTP/1.{}\r\n{}\r\n",
-                        self.method.as_ref().unwrap().as_str(),
+                        self.method.as_str(),
                         path.as_str(),
-                        self.version.as_ref().unwrap(),
+                        self.version,
                         hs);
 
         let mut payload: Vec<u8> = Vec::from(s.as_bytes());

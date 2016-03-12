@@ -4,9 +4,9 @@ use httparse_orig;
 use parsable::{Parsable, Sendable, ParseStatus, parse_body};
 
 pub struct Response {
-    pub version: Option<u8>,
-    pub status_code: Option<u16>,
-    pub reason: Option<String>,
+    pub version: u8,
+    pub status_code: u16,
+    pub reason: String,
     pub headers: HashMap<String, Vec<u8>>,
     pub body: Option<Vec<u8>>,
 }
@@ -14,9 +14,9 @@ pub struct Response {
 impl Parsable for Response {
     fn new() -> Response {
         Response {
-            version: None,
-            status_code: None,
-            reason: None,
+            version: 1,
+            status_code: 200,
+            reason: String::new(),
             headers: HashMap::new(),
             body: None,
         }
@@ -47,9 +47,9 @@ impl Parsable for Response {
             headers_hm.insert(String::from(h.name), Vec::from(h.value));
         }
 
-        self.version = Some(res.version.unwrap());
-        self.status_code = Some(res.code.unwrap());
-        self.reason = Some(String::from(res.reason.unwrap()));
+        self.version = res.version.unwrap();
+        self.status_code = res.code.unwrap();
+        self.reason = String::from(res.reason.unwrap());
         self.headers = headers_hm;
         self.body = body;
         let length = (match self.body.as_ref() {
@@ -74,9 +74,9 @@ impl Sendable for Response {
                         });
 
         let s = format!("HTTP/1.{} {} {}\r\n{}\r\n",
-                        self.version.as_ref().unwrap(),
-                        self.status_code.as_ref().unwrap(),
-                        self.reason.as_ref().unwrap().as_str(),
+                        self.version,
+                        self.status_code,
+                        self.reason.as_str(),
                         hs);
 
         let mut payload: Vec<u8> = Vec::from(s.as_bytes());
