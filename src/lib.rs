@@ -9,9 +9,9 @@ extern crate httparse as httparse_orig;
 mod rainyproxy;
 pub use rainyproxy::RainyProxy;
 
-mod request;
-mod response;
-mod parsable;
+pub mod request;
+pub mod response;
+pub mod parsable;
 mod connection;
 
 pub mod httparse {
