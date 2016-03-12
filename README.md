@@ -53,3 +53,8 @@ main.rs
         },
         |&mut _| {});
     }
+
+# Todo
+- [ ] support HTTPS
+- [ ] support persistent connection
+- [ ] implement timeout of read and write
