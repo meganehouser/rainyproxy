@@ -47,7 +47,7 @@ impl Request {
 }
 
 impl Parsable for Request {
-    pub fn new() -> Request {
+    fn new() -> Request {
         Request {
             method: String::from("GET"),
             path: String::from("/"),
@@ -57,7 +57,7 @@ impl Parsable for Request {
         }
     }
 
-    pub fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
+    fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
         let mut headers = [httparse_orig::EMPTY_HEADER; 100];
 
         let mut req = httparse_orig::Request::new(&mut headers);
@@ -99,7 +99,7 @@ impl Parsable for Request {
 
 
 impl Sendable for Request {
-    pub fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&self) -> Vec<u8> {
         let path = self.path
                        .split("/")
                        .skip(3)

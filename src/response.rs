@@ -12,7 +12,7 @@ pub struct Response {
 }
 
 impl Parsable for Response {
-    pub fn new() -> Response {
+    fn new() -> Response {
         Response {
             version: 1,
             status_code: 200,
@@ -22,7 +22,7 @@ impl Parsable for Response {
         }
     }
 
-    pub fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
+    fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
         let mut headers = [httparse_orig::EMPTY_HEADER; 100];
 
         let mut res = httparse_orig::Response::new(&mut headers);
@@ -62,7 +62,7 @@ impl Parsable for Response {
 }
 
 impl Sendable for Response {
-    pub fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&self) -> Vec<u8> {
         let mut headers = self.headers.clone();
         headers.insert(String::from("Connection"), Vec::from("Close"));
 
