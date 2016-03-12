@@ -34,11 +34,11 @@ impl RainyProxy {
     }
 
     pub fn serve(&self) -> IoResult<()> {
-        self.serve_custom(|&mut _, &mut _| {}, |&mut _| {})
+        self.serve_custom(|_| None, |_| {})
     }
 
     pub fn serve_custom<RQ, RS>(&self, on_request: RQ, on_response: RS) -> IoResult<()>
-        where RQ: Fn(&mut Request, &mut Option<Response>) + 'static + Send + Sync,
+        where RQ: Fn(&mut Request) -> Option<Response> + 'static + Send + Sync,
               RS: Fn(&mut Response) + 'static + Send + Sync
     {
         let listener = try!(TcpListener::bind(&self.addr));
@@ -70,8 +70,7 @@ impl RainyProxy {
                             };
                             debug!("connect to server.");
 
-                            let mut user_res = None;
-                            __handlers.0(&mut request, &mut user_res);
+                            let mut user_res = __handlers.0(&mut request);
 
                             // send request to destination host
                             try_com!(dest_conn.send(&request), err=>return Ok(()));
