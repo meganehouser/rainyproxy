@@ -55,6 +55,7 @@ main.rs
     }
 
 # Todo
+- [ ] chained proxy (with authentication)
 - [ ] support HTTPS
 - [ ] support persistent connection
 - [ ] implement timeout of read and write
