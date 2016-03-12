@@ -63,19 +63,21 @@ impl Parsable for Response {
 
 impl Sendable for Response {
     fn to_bytes(&self) -> Vec<u8> {
-        let headers = self.headers
-                          .iter()
-                          .fold(String::new(), |acc, (k, v)| {
-                              return acc +
-                                     format!("{}: {}\r\n", &k, str::from_utf8(&v).unwrap())
-                                         .as_str();
-                          });
+        let mut headers = self.headers.clone();
+        headers.insert(String::from("Connection"), Vec::from("Close"));
+
+        let hs = headers.iter()
+                        .filter(|h| h.0.as_str() != "Keep-Alive")
+                        .fold(String::new(), |acc, (k, v)| {
+                            return acc +
+                                   format!("{}: {}\r\n", &k, str::from_utf8(&v).unwrap()).as_str();
+                        });
 
         let s = format!("HTTP/1.{} {} {}\r\n{}\r\n",
                         self.version.as_ref().unwrap(),
                         self.status_code.as_ref().unwrap(),
                         self.reason.as_ref().unwrap().as_str(),
-                        headers);
+                        hs);
 
         let mut payload: Vec<u8> = Vec::from(s.as_bytes());
         if self.body.is_some() {

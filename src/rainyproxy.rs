@@ -12,6 +12,7 @@ macro_rules! try_com {
     ($com: expr, err => $errexpr: expr) => {
         match $com {
             ConnResult::Ok(x) => x,
+            ConnResult::ZeroPacket => return Ok(()),
             ConnResult::ParseErr(_) => $errexpr,
             ConnResult::IoError(_) => $errexpr,
         }
@@ -55,47 +56,42 @@ impl RainyProxy {
                         let __handlers = _handlers.clone();
 
                         mioco::spawn(move || -> IoResult<()> {
-                            loop {
-                                // recieve source request
-                                let mut request: Request = try_com!(src_conn.recieve(), err=>break);
-                                debug!("receive from client.");
+                            // recieve source request
+                            let mut request: Request = try_com!(src_conn.recieve(), err=>return
+                            Ok(()));
+                            debug!("receive from client.");
 
-                                // connect to the server
-                                let mut dest_conn = match Connection::from(&request.host()
-                                                                                   .as_str(),
-                                                                           &request.port()) {
-                                    Some(conn) => conn,
-                                    None => break,
-                                };
-                                debug!("connect to server.");
+                            // connect to the server
+                            let mut dest_conn = match Connection::from(&request.host()
+                                                                               .as_str(),
+                                                                       &request.port()) {
+                                Some(conn) => conn,
+                                None => return Ok(()),
+                            };
+                            debug!("connect to server.");
 
-                                let mut user_res = None;
-                                __handlers.0(&mut request, &mut user_res);
+                            let mut user_res = None;
+                            __handlers.0(&mut request, &mut user_res);
 
-                                // send request to destination host
-                                try_com!(dest_conn.send(&request), err=>break);
+                            // send request to destination host
+                            try_com!(dest_conn.send(&request), err=>return Ok(()));
 
-                                debug!("send to server.");
+                            debug!("send to server.");
 
-                                // recieve destination response
-                                let mut response: Response = match user_res {
-                                    Some(r) => r,
-                                    None => try_com!(dest_conn.recieve(), err=>break),
-                                };
+                            // recieve destination response
+                            let mut response: Response = match user_res {
+                                Some(r) => r,
+                                None => try_com!(dest_conn.recieve(), err=>return Ok(())),
+                            };
 
-                                debug!("recieved from server.");
+                            debug!("recieved from server.");
 
-                                __handlers.1(&mut response);
+                            __handlers.1(&mut response);
 
-                                // send response to source host
-                                try_com!(src_conn.send(&response), err=>break);
+                            // send response to source host
+                            try_com!(src_conn.send(&response), err=>return Ok(()));
 
-                                debug!("send to client");
-
-                                if request.must_close() {
-                                    break;
-                                };
-                            }
+                            debug!("send to client");
 
                             Ok(())
                         });

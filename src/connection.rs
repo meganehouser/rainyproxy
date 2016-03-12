@@ -6,6 +6,7 @@ use parsable::{Parsable, Sendable};
 
 pub enum ConnResult<T> {
     Ok(T),
+    ZeroPacket,
     ParseErr(httparse_orig::Error),
     IoError(io::Error),
 }
@@ -49,12 +50,17 @@ impl Connection {
             {
                 let mut buf = &mut buf_vec[..];
                 let read_result = self.stream.try_read(&mut buf[buf_i..]);
-
                 match read_result {
                     Ok(opt_size) => {
                         match opt_size {
                             None => {}
-                            Some(len) => buf_i += len,
+                            Some(len) => {
+                                if len == 0 {
+                                    return ConnResult::ZeroPacket;
+                                } else {
+                                    buf_i += len
+                                }
+                            }
                         }
                     }
                     Err(err) => return ConnResult::IoError(err),
