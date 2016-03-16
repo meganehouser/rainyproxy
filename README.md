@@ -62,4 +62,4 @@ fn main() {
 - [ ] support HTTPS
 - [ ] support persistent connection
 - [ ] implement timeout of read and write
-- [ ] add test, test, and test!
+- [ ] add tests, tests, and tests!
