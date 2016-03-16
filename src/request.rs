@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::str;
 use httparse_orig;
+use regex::Regex;
 use parsable::{Parsable, Sendable, ParseStatus, parse_body};
 
 pub struct Request {
@@ -12,26 +13,16 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn host(&self) -> String {
-        self.path
-            .trim_left_matches("http://")
-            .split("/")
-            .nth(0)
-            .unwrap()
-            .split(":")
-            .nth(0)
-            .unwrap()
-            .to_string()
-    }
-    pub fn port(&self) -> u16 {
-        let port_str = match self.path.split(":").nth(2) {
-                           Some(s) => s,
-                           None => return 80,
-                       }
-                       .split("/")
-                       .nth(0)
-                       .unwrap();
-        str::FromStr::from_str(port_str).ok().unwrap_or(80)
+    pub fn disassembly_path(&self) -> (&str, &str, u16, &str) {
+        let re: Regex = Regex::new(r"^(.+?)://(.+?):?(\d+)?(/.*)?$").unwrap();
+        for cap in re.captures_iter(self.path.as_str()) {
+            return (cap.at(1).unwrap_or(""),
+                    cap.at(2).unwrap_or(""),
+                    str::FromStr::from_str(cap.at(3).unwrap_or("")).ok().unwrap_or(80),
+                    cap.at(4).unwrap_or(""));
+        }
+
+        ("", "", 80, "")
     }
 
     pub fn must_close(&self) -> bool {
@@ -127,5 +118,24 @@ impl Sendable for Request {
         }
 
         payload
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn disassembly_request_path() {
+        use super::Request;
+        use super::super::Parsable;
+
+        let src_path = "http://example.com:8888/index.html";
+        let mut req = Request::new();
+        req.path = String::from(src_path);
+        let (protocol, host, port, path) = req.disassembly_path();
+
+        assert_eq!(protocol, "http");
+        assert_eq!(host, "example.com");
+        assert_eq!(port, 8888);
+        assert_eq!(path, "/index.html");
     }
 }

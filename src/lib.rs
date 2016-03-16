@@ -5,6 +5,7 @@ extern crate log;
 extern crate env_logger;
 extern crate mioco;
 extern crate httparse as httparse_orig;
+extern crate regex;
 
 mod rainyproxy;
 pub use rainyproxy::RainyProxy;

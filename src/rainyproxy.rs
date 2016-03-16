@@ -62,11 +62,12 @@ impl RainyProxy {
                             debug!("receive from client.");
 
                             // connect to the server
-                            let mut dest_conn = match Connection::from(&request.host()
-                                                                               .as_str(),
-                                                                       &request.port()) {
-                                Some(conn) => conn,
-                                None => return Ok(()),
+                            let mut dest_conn: Connection = {
+                                let (protocol, host, port, path) = request.disassembly_path();
+                                match Connection::from(host, &port) {
+                                    Some(conn) => conn,
+                                    None => return Ok(()),
+                                }
                             };
                             debug!("connect to server.");
 
