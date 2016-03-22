@@ -57,7 +57,7 @@ impl RainyProxy {
 
                         mioco::spawn(move || -> IoResult<()> {
                             // recieve source request
-                            let mut request: Request = try_com!(src_conn.recieve(), err=>return
+                            let mut request = try_com!(src_conn.recieve::<Request>(), err=>return
                             Ok(()));
                             debug!("receive from client.");
 
@@ -79,9 +79,11 @@ impl RainyProxy {
                             debug!("send to server.");
 
                             // recieve destination response
-                            let mut response: Response = match user_res {
+                            let mut response = match user_res {
                                 Some(r) => r,
-                                None => try_com!(dest_conn.recieve(), err=>return Ok(())),
+                                None => {
+                                    try_com!(dest_conn.recieve::<Response>(), err=>return Ok(()))
+                                }
                             };
 
                             debug!("recieved from server.");

@@ -11,8 +11,8 @@ pub struct Response {
     pub body: Option<Vec<u8>>,
 }
 
-impl Parsable for Response {
-    fn new() -> Response {
+impl Response {
+    pub fn new(version: u8, status_code: u16, reason: &str) -> Response {
         Response {
             version: 1,
             status_code: 200,
@@ -21,8 +21,12 @@ impl Parsable for Response {
             body: None,
         }
     }
+}
 
-    fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
+impl Parsable for Response {
+    type Parsed = Response;
+
+    fn parse(buf: &[u8]) -> ParseStatus<Self::Parsed> {
         let mut headers = [httparse_orig::EMPTY_HEADER; 100];
 
         let mut res = httparse_orig::Response::new(&mut headers);
@@ -47,17 +51,15 @@ impl Parsable for Response {
             headers_hm.insert(String::from(h.name), Vec::from(h.value));
         }
 
-        self.version = res.version.unwrap();
-        self.status_code = res.code.unwrap();
-        self.reason = String::from(res.reason.unwrap());
-        self.headers = headers_hm;
-        self.body = body;
-        let length = (match self.body.as_ref() {
-            Some(ref b) => b.len(),
-            None => 0,
-        }) + res_len;
+        let res = Response {
+            version: res.version.unwrap(),
+            status_code: res.code.unwrap(),
+            reason: String::from(res.reason.unwrap()),
+            headers: headers_hm,
+            body: body,
+        };
 
-        ParseStatus::Complete(length)
+        ParseStatus::Complete(res)
     }
 }
 

@@ -2,7 +2,7 @@ use std::io;
 use std::net::lookup_host;
 use mioco;
 use httparse_orig;
-use parsable::{Parsable, Sendable};
+use parsable::{Parsable, Sendable, ParseStatus};
 
 pub enum ConnResult<T> {
     Ok(T),
@@ -41,10 +41,9 @@ impl Connection {
         None
     }
 
-    pub fn recieve<P: Parsable>(&mut self) -> ConnResult<P> {
+    pub fn recieve<P: Parsable>(&mut self) -> ConnResult<P::Parsed> {
         let mut buf_i = 0;
         let mut buf_vec: Vec<u8> = Vec::from(&[0u8; 1024] as &[u8]);
-        let mut parsable = P::new();
 
         loop {
             {
@@ -66,9 +65,11 @@ impl Connection {
                     Err(err) => return ConnResult::IoError(err),
                 }
 
-                let parse_result = parsable.parse(&buf[0..buf_i]);
-                if parse_result.is_complete() {
-                    return ConnResult::Ok(parsable);
+                let parse_result = P::parse(&buf[0..buf_i]);
+                match parse_result {
+                    ParseStatus::Complete(parsed) => return ConnResult::Ok(parsed),
+                    ParseStatus::InProgress => {}
+                    ParseStatus::Err(err) => return ConnResult::ParseErr(err),
                 }
             }
 

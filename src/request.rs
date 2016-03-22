@@ -38,17 +38,9 @@ impl Request {
 }
 
 impl Parsable for Request {
-    fn new() -> Request {
-        Request {
-            method: String::from("GET"),
-            path: String::from("/"),
-            version: 1,
-            headers: HashMap::new(),
-            body: None,
-        }
-    }
+    type Parsed = Request;
 
-    fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize> {
+    fn parse(buf: &[u8]) -> ParseStatus<Self::Parsed> {
         let mut headers = [httparse_orig::EMPTY_HEADER; 100];
 
         let mut req = httparse_orig::Request::new(&mut headers);
@@ -73,18 +65,15 @@ impl Parsable for Request {
             headers_hm.insert(String::from(h.name), Vec::from(h.value));
         }
 
-        self.method = String::from(req.method.unwrap());
-        self.path = String::from(req.path.unwrap());
-        self.version = req.version.unwrap();
-        self.headers = headers_hm;
-        self.body = body;
+        let req = Request {
+            method: String::from(req.method.unwrap()),
+            path: String::from(req.path.unwrap()),
+            version: req.version.unwrap(),
+            headers: headers_hm,
+            body: body,
+        };
 
-        let length = (match self.body.as_ref() {
-            Some(ref b) => b.len(),
-            None => 0,
-        }) + req_len;
-
-        ParseStatus::Complete(length)
+        ParseStatus::Complete(req)
     }
 }
 

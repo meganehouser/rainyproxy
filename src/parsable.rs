@@ -17,8 +17,8 @@ impl<T> ParseStatus<T> {
 }
 
 pub trait Parsable {
-    fn new() -> Self;
-    fn parse(&mut self, buf: &[u8]) -> ParseStatus<usize>;
+    type Parsed;
+    fn parse(buf: &[u8]) -> ParseStatus<Self::Parsed>;
 }
 
 pub trait Sendable {
