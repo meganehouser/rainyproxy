@@ -39,9 +39,7 @@ fn main() {
         let response = if req.path.starts_with("http://q.hatena.ne.jp") {
             let body = b"<html><body>Don't worry. Answer is in your heart.</body></html>\r\n";
             let body_len = body.len();
-            let mut res = Response::new();
-            res.status_code = 200;
-            res.reason = String::from("OK");
+            let mut res = Response::new(1, 200, "OK");
             res.headers.insert(String::from("Content-Type"), Vec::from(b"text/html" as &[u8]));
             res.headers.insert(String::from("Content-Length"),
             Vec::from(body_len.to_string().as_str()));
