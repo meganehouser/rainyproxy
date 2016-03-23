@@ -58,44 +58,36 @@ impl RainyProxy {
                         mioco::spawn(move || -> IoResult<()> {
                             let (on_request, on_response) = (&__handlers.0, &__handlers.1);
 
-                            // recieve source request
+                            debug!("receive from the source host.");
                             let mut request = try_com!(src_conn.recieve::<Request>(), err=>return
                             Ok(()));
-                            debug!("receive from client.");
 
-                            // connect to the server
-                            let mut dest_conn: Connection = {
-                                let (protocol, host, port, path) = request.disassembly_path();
-                                match Connection::from(host, &port) {
-                                    Some(conn) => conn,
-                                    None => return Ok(()),
-                                }
-                            };
-                            debug!("connect to server.");
-
-                            let mut user_res = on_request(&mut request);
-
-                            // send request to destination host
-                            try_com!(dest_conn.send(&request), err=>return Ok(()));
-
-                            debug!("send to server.");
-
-                            // recieve destination response
-                            let mut response = match user_res {
-                                Some(r) => r,
+                            let mut response = match on_request(&mut request) {
+                                Some(usr_req) => usr_req,
                                 None => {
+                                    debug!("connect to the destination host.");
+                                    let mut dest_conn: Connection = {
+                                        let (protocol, host, port, path) =
+                                            request.disassembly_path();
+                                        match Connection::from(host, &port) {
+                                            Some(conn) => conn,
+                                            None => return Ok(()),
+                                        }
+                                    };
+
+                                    debug!("send to the destination host.");
+                                    try_com!(dest_conn.send(&request), err=>return Ok(()));
+
+
+                                    debug!("recieved from the destination host.");
                                     try_com!(dest_conn.recieve::<Response>(), err=>return Ok(()))
                                 }
                             };
 
-                            debug!("recieved from server.");
-
                             on_response(&mut response);
 
-                            // send response to source host
+                            debug!("send to the surce host.");
                             try_com!(src_conn.send(&response), err=>return Ok(()));
-
-                            debug!("send to client");
 
                             Ok(())
                         });
