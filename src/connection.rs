@@ -11,6 +11,10 @@ pub enum ConnResult<T> {
     IoError(io::Error),
 }
 
+pub trait ToHostAndPort {
+    fn to_host_and_port(&self) -> (&str, u16);
+}
+
 pub struct Connection {
     stream: mioco::tcp::TcpStream,
 }
@@ -20,7 +24,13 @@ impl Connection {
         Connection { stream: stream }
     }
 
-    pub fn from(host: &str, port: &u16) -> Option<Connection> {
+    pub fn from<T: ToHostAndPort>(t: &T) -> Option<Connection> {
+        let (host, port) = t.to_host_and_port();
+        Connection::connect(host, &port)
+    }
+
+    pub fn connect(host: &str, port: &u16) -> Option<Connection> {
+
         let lookupd = match lookup_host(host) {
             Ok(l) => l,
             Err(_) => return None,

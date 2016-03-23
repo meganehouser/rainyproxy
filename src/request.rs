@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::str;
 use httparse_orig;
 use regex::Regex;
+use connection::ToHostAndPort;
 use parsable::{Parsable, Sendable, ParseStatus, parse_body};
 
 pub struct Request {
@@ -107,6 +108,13 @@ impl Sendable for Request {
         }
 
         payload
+    }
+}
+
+impl ToHostAndPort for Request {
+    fn to_host_and_port(&self) -> (&str, u16) {
+        let (_, host, port, _) = self.disassembly_path();
+        (host, port)
     }
 }
 

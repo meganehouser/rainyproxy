@@ -66,10 +66,8 @@ impl RainyProxy {
                                 Some(usr_req) => usr_req,
                                 None => {
                                     debug!("connect to the destination host.");
-                                    let mut dest_conn: Connection = {
-                                        let (protocol, host, port, path) =
-                                            request.disassembly_path();
-                                        match Connection::from(host, &port) {
+                                    let mut dest_conn = {
+                                        match Connection::from(&request) {
                                             Some(conn) => conn,
                                             None => return Ok(()),
                                         }
