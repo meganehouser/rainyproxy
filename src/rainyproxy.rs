@@ -47,15 +47,17 @@ impl RainyProxy {
         let handlers = Arc::new((on_request, on_response));
         mioco::start(move || -> IoResult<()> {
             for _ in 0..mioco::thread_num() {
-                let listener: TcpListener = try!(listener.try_clone());
                 let _handlers = handlers.clone();
+                let listener: TcpListener = try!(listener.try_clone());
 
                 mioco::spawn(move || -> IoResult<()> {
                     loop {
-                        let mut src_conn = Connection::new(try!(listener.accept()));
                         let __handlers = _handlers.clone();
+                        let mut src_conn = Connection::new(try!(listener.accept()));
 
                         mioco::spawn(move || -> IoResult<()> {
+                            let (on_request, on_response) = (&__handlers.0, &__handlers.1);
+
                             // recieve source request
                             let mut request = try_com!(src_conn.recieve::<Request>(), err=>return
                             Ok(()));
@@ -71,7 +73,7 @@ impl RainyProxy {
                             };
                             debug!("connect to server.");
 
-                            let mut user_res = __handlers.0(&mut request);
+                            let mut user_res = on_request(&mut request);
 
                             // send request to destination host
                             try_com!(dest_conn.send(&request), err=>return Ok(()));
@@ -88,7 +90,7 @@ impl RainyProxy {
 
                             debug!("recieved from server.");
 
-                            __handlers.1(&mut response);
+                            on_response(&mut response);
 
                             // send response to source host
                             try_com!(src_conn.send(&response), err=>return Ok(()));
