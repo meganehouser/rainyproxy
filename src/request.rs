@@ -123,16 +123,19 @@ mod tests {
     #[test]
     fn disassembly_request_path() {
         use super::Request;
-        use super::super::Parsable;
+        use super::super::{Parsable, ParseStatus};
 
-        let src_path = "http://example.com:8888/index.html";
-        let mut req = Request::new();
-        req.path = String::from(src_path);
-        let (protocol, host, port, path) = req.disassembly_path();
+        let bin = b"GET http://example.com:8888/index.html HTTP/1.1\r\n\r\n";
 
-        assert_eq!(protocol, "http");
-        assert_eq!(host, "example.com");
-        assert_eq!(port, 8888);
-        assert_eq!(path, "/index.html");
+        match Request::parse(bin as &[u8]) {
+            ParseStatus::Complete(req) => {
+                let (protocol, host, port, path) = req.disassembly_path();
+                assert_eq!(protocol, "http");
+                assert_eq!(host, "example.com");
+                assert_eq!(port, 8888);
+                assert_eq!(path, "/index.html");
+            }
+            _ => panic!("Invalid reuslt"),
+        };
     }
 }
