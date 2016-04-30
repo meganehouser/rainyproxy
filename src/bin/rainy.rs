@@ -1,10 +1,14 @@
+extern crate chrono;
 extern crate clap;
 extern crate log;
 extern crate env_logger;
 extern crate rainyproxy;
 
 use std::env;
+use chrono::*;
 use clap::{App, Arg};
+use log::LogRecord;
+use env_logger::LogBuilder;
 use rainyproxy::RainyProxy;
 
 fn main() {
@@ -25,15 +29,24 @@ fn main() {
                       .get_matches();
 
     let addr = matches.value_of("address").unwrap_or("127.0.0.1:8800");
-    set_log_level(matches.value_of("loglevel").unwrap_or("info"));
-    env_logger::init().unwrap();
+    let mut builder = init_builder(matches.value_of("loglevel").unwrap_or("info"));
+    builder.init().unwrap();
 
     let proxy = RainyProxy::new(&addr);
     proxy.serve();
 }
 
-fn set_log_level(level: &str) {
+fn init_builder(level: &str) -> LogBuilder {
     let rainy_level = format!("rainy={}", level);
+    let format = |record: &LogRecord| {
+        format!("[{}] {} {}",
+                UTC::now().to_rfc3339(),
+                record.level(),
+                record.args())
+    };
+
+    let mut builder = LogBuilder::new();
+    builder.format(format);
 
     let log_level = match env::var("RUST_LOG") {
         Ok(ref rust_log) => {
@@ -44,5 +57,7 @@ fn set_log_level(level: &str) {
         Err(_) => rainy_level,
     };
 
-    env::set_var("RUST_LOG", &log_level);
+    builder.parse(&log_level);
+
+    builder
 }
