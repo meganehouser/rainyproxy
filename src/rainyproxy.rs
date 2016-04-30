@@ -16,7 +16,18 @@ macro_rules! try_com {
             ConnResult::ParseErr(_) => $errexpr,
             ConnResult::IoError(_) => $errexpr,
         }
-    }
+    };
+}
+
+macro_rules! bad_gateway {
+    ($com: expr) => {
+        match $com {
+            ConnResult::Ok(x) => x,
+            ConnResult::ZeroPacket => return Response::bad_gateway_502(),
+            ConnResult::ParseErr(_) => return Response::bad_gateway_502(),
+            ConnResult::IoError(_) => return Response::bad_gateway_502(),
+        }
+    };
 }
 
 ///
@@ -66,19 +77,18 @@ impl RainyProxy {
                                 Some(usr_req) => usr_req,
                                 None => {
                                     debug!("connect to the destination host.");
-                                    let mut dest_conn = {
-                                        match Connection::from(&request) {
-                                            Some(conn) => conn,
-                                            None => return Ok(()),
+                                    match Connection::from(&request) {
+                                        Some(mut dest_conn) => {
+                                            (|| {
+                                                debug!("send to the destination host.");
+                                                bad_gateway!(dest_conn.send(&request));
+
+                                                debug!("recieved from the destination host.");
+                                                return bad_gateway!(dest_conn.recieve::<Response>());
+                                            })()
                                         }
-                                    };
-
-                                    debug!("send to the destination host.");
-                                    try_com!(dest_conn.send(&request), err=>return Ok(()));
-
-
-                                    debug!("recieved from the destination host.");
-                                    try_com!(dest_conn.recieve::<Response>(), err=>return Ok(()))
+                                        None => Response::bad_gateway_502(),
+                                    }
                                 }
                             };
 

@@ -21,6 +21,20 @@ impl Response {
             body: None,
         }
     }
+
+    pub fn bad_gateway_502() -> Response {
+        let mut headers = HashMap::<String, Vec<u8>>::new();
+        headers.insert(String::from("Content-Length"), Vec::from("11"));
+        headers.insert(String::from("Connection"), Vec::from("Close"));
+
+        Response {
+            version: 1,
+            status_code: 502,
+            reason: String::from("Bad Gateway"),
+            headers: headers,
+            body: Some(Vec::from("Bad Gateway")),
+        }
+    }
 }
 
 impl Parsable for Response {
