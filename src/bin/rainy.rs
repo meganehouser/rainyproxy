@@ -28,7 +28,7 @@ fn main() {
                                .required(false))
                       .get_matches();
 
-    let addr = matches.value_of("address").unwrap_or("127.0.0.1:8800");
+    let addr = matches.value_of("addr").unwrap_or("127.0.0.1:8800");
     let mut builder = init_builder(matches.value_of("loglevel").unwrap_or("info"));
     builder.init().unwrap();
 
