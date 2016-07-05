@@ -36,12 +36,7 @@ impl Connection {
             Err(_) => return None,
         };
 
-        for result in lookupd {
-            let mut addr = match result {
-                Ok(a) => a,
-                Err(e) => return None,
-            };
-
+        for mut addr in lookupd {
             addr.set_port(*port);
             match mioco::tcp::TcpStream::connect(&addr) {
                 Ok(c) => return Some(Connection::new(c)),
