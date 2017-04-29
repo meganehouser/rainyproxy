@@ -1,18 +1,16 @@
 [package]
 name = "rainyproxy"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["meganehouser <sleepy.st818@gmail.com>"]
 
-[dependencies.mioco]
-git = "https://github.com/dpc/mioco.git"
-
-[dependencies.clap]
-clap = "2"
-default-features = false
-
 [dependencies]
-httparse = "1.1"
+tokio-core = "0.1"
+tokio-io = "0.1"
+hyper = { git = "https://github.com/hyperium/hyper", branch="master"}
+hyper-tls = { git = "https://github.com/hyperium/hyper-tls", branch="master"}
+futures = "0.1.11"
 log = "0.3"
 env_logger = "0.3"
 regex = "0.1"
 chrono = "0.2"
+clap = "2"

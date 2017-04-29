@@ -32,7 +32,7 @@ fn main() {
     let mut builder = init_builder(matches.value_of("loglevel").unwrap_or("info"));
     builder.init().unwrap();
 
-    let proxy = RainyProxy::new(&addr);
+    let proxy = RainyProxy::new(addr.parse().unwrap());
     proxy.serve();
 }
 
