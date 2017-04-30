@@ -21,43 +21,40 @@ Cargo.toml
 ```toml
 [dependencies.rainyproxy]
 git = "https://github.com/meganehouser/rainyproxy.git"
+
+[dependencies]
+hyper = { git = "https://github.com/hyperium/hyper", branch="master"}
 ```
 
 main.rs
 
 ```rust
+extern crate hyper;
 extern crate rainyproxy;
 
 use rainyproxy::RainyProxy;
-use rainyproxy::Request;
-use rainyproxy::Response;
-use rainyproxy::Parsable;
+use hyper::server::Response;
+use hyper::status::StatusCode;
+
+const BODY: &[u8] = b"<html><body>Don't worry. Answer is in your heart.</body></html>\r\n";
 
 fn main() {
-    let proxy = RainyProxy::new(&"localhost:8800");
-    proxy.serve_custom(|req| {
-        let response = if req.path.starts_with("http://q.hatena.ne.jp") {
-            let body = b"<html><body>Don't worry. Answer is in your heart.</body></html>\r\n";
-            let body_len = body.len();
-            let mut res = Response::new(1, 200, "OK");
-            res.headers.insert(String::from("Content-Type"), Vec::from(b"text/html" as &[u8]));
-            res.headers.insert(String::from("Content-Length"),
-            Vec::from(body_len.to_string().as_str()));
-            res.body = Some(Vec::from(body as &[u8]));
-            Some(res)
-        }else {
-            None
-        };
- 
-        response
-    },
-    |_| {});
+    let proxy = RainyProxy::new("127.0.0.1:8800".parse().unwrap());
+    proxy.serve_custom(|request| {
+                           if uri.contains("q.hatena.ne.jp") {
+                               Some(Response::new()
+                                        .with_status(StatusCode::Ok)
+                                        .with_body(BODY))
+                           } else {
+                               None
+                           }
+                       },
+                       |_| None);
 }
 ```
 
 # Todo
 - [ ] chained proxy (with authentication)
 - [ ] support HTTPS
-- [ ] support persistent connection
 - [ ] implement timeout of read and write
 - [ ] add tests, tests, and tests!
